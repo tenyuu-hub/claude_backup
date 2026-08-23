@@ -1,0 +1,55 @@
+{
+  "_comment": "Dropbox 経由で同期する ~/.claude 配下の項目。ここを編集すれば同期対象を変えられます。",
+  "include": [
+    { "path": "CLAUDE.md",          "type": "file", "desc": "グローバルメモリ（全プロジェクト共通の指示）" },
+    { "path": "settings.json",      "type": "file", "desc": "Claude Code 設定（権限・フック・モデル等）" },
+    { "path": "keybindings.json",   "type": "file", "desc": "キーバインド" },
+    { "path": "skills",             "type": "dir",  "desc": "自作スキル" },
+    { "path": "commands",           "type": "dir",  "desc": "スラッシュコマンド" },
+    { "path": "agents",             "type": "dir",  "desc": "サブエージェント定義" },
+    { "path": "output-styles",      "type": "dir",  "desc": "出力スタイル" },
+    { "path": "plugins/config.json","type": "file", "desc": "プラグイン／マーケットプレイス設定" }
+  ],
+
+  "_excludeComment": "同期対象フォルダの中にあっても絶対にコピーしないもの。認証情報と機密は必ずここに残すこと。",
+  "excludeFiles": [
+    ".credentials.json",
+    "settings.local.json",
+    ".claude-sync-state.json",
+    ".env",
+    ".env.*",
+    "*.pem",
+    "*.key",
+    "*.pfx",
+    "id_rsa",
+    "id_ed25519",
+    "history.jsonl",
+    "*.log",
+    "Thumbs.db",
+    ".DS_Store"
+  ],
+  "excludeDirs": [
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".mypy_cache",
+    ".pytest_cache"
+  ],
+
+  "_secretComment": "push 前にこのパターンで中身を走査し、1件でも当たれば中断する（-Force で強行可）。",
+  "secretPatterns": [
+    "sk-ant-[A-Za-z0-9_\\-]{20,}",
+    "sk-[A-Za-z0-9]{32,}",
+    "ghp_[A-Za-z0-9]{30,}",
+    "gho_[A-Za-z0-9]{30,}",
+    "github_pat_[A-Za-z0-9_]{30,}",
+    "AKIA[0-9A-Z]{16}",
+    "xox[baprs]-[A-Za-z0-9-]{10,}",
+    "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+    "AIza[0-9A-Za-z_\\-]{35}"
+  ],
+  "secretScanExtensions": [ ".md", ".json", ".txt", ".yaml", ".yml", ".ps1", ".sh", ".js", ".ts", ".py", ".toml", ".ini", ".cfg", "" ],
+  "secretScanMaxBytes": 1048576
+}

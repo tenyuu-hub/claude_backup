@@ -1,0 +1,8 @@
+# 同期される実データ（Dropbox 側にのみ置く。リポジトリには入れない）
+data/
+.claude-sync-meta.json
+
+# マシンごとのローカル設定・状態
+*.local.json
+config.json
+state.json
