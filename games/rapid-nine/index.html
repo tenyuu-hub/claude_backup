@@ -86,7 +86,30 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 @keyframes slam{0%{transform:scale(2.2)}100%{transform:scale(1)}}
 .cell.t.miss{animation:miss .3s ease-out}
 @keyframes miss{0%{background:var(--hit)}100%{background:var(--rail)}}
-.cell.t.gone{visibility:hidden}
+.cell.t.gone,.cell.aim.gone{visibility:hidden}
+/* one-shot mode: a single target cell */
+.cell.zone{background:#1e2531}
+.cell.zone.why{background:#5a1f17;color:#fff}
+.cell.aim{background:var(--rail);font-family:var(--f-display);font-weight:400;font-size:7cqi;color:var(--brass)}
+.cell.aim:not(.shot)::after{content:"";position:absolute;inset:12%;border:2px solid var(--hit);border-radius:50%;animation:aim 1.2s ease-in-out infinite}
+.cell.aim:not(.shot)::before{content:"";position:absolute;inset:0;background:linear-gradient(var(--hit),var(--hit)) center/2px 34% no-repeat,linear-gradient(var(--hit),var(--hit)) center/34% 2px no-repeat}
+@keyframes aim{50%{transform:scale(.82)}}
+.cell.aim.hitnow{animation:hitcell .32s ease-out}
+.cell.aim.hitnow span{display:inline-block;animation:slam .22s cubic-bezier(.2,1.6,.4,1)}
+.cell.aim.miss{animation:miss .3s ease-out}
+.mag.ammo{gap:5px}
+.mag .round{border:0;border-radius:10px;background:var(--plate);height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;font-family:var(--f-display);font-size:19px;color:var(--bone);touch-action:manipulation}
+.mag .round::before{content:"";width:9px;height:20px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--brass) 0 38%,#b07f2c 38% 100%)}
+.mag .round:active{transform:scale(.94);background:var(--rail)}
+.mag .round.dud{animation:dud .3s ease-out}
+@keyframes dud{0%{background:var(--hit);transform:translateX(-3px)}50%{transform:translateX(3px)}100%{background:var(--plate);transform:none}}
+.modes{display:flex;flex-direction:column;gap:10px}
+.mode-btn{border:0;border-radius:12px;background:var(--brass);color:var(--steel);padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.mode-btn b{font-family:var(--f-display);font-weight:400;font-size:22px}
+.mode-btn span{font-size:13px}
+.mode-btn.alt{background:var(--plate);color:var(--bone);border:1px solid var(--brass-dim)}
+.mode-btn.alt b{color:var(--brass)}
+.mode-btn:active{transform:scale(.98)}
 .callout{text-align:center;font-family:var(--f-display);font-size:16px;height:30px;display:flex;align-items:center;justify-content:center;gap:8px}
 .callout b{font-weight:400;color:var(--hit);font-size:26px;line-height:1}
 .mag{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
@@ -128,16 +151,17 @@ canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-in
     <h1 class="logo">ラピッド<em>ナイン</em></h1>
     <p class="tag">1から9まで、撃ち抜け。</p>
     <ul class="how">
-      <li><b>3×3</b><span>撃てるのは真ん中の明るい的だけ。</span></li>
-      <li><b>1→9</b><span>画面に出る数字の「入る場所」を順に撃つ。</span></li>
-      <li><b>HINT</b><span>周りの数字と同じ行・列には、同じ数字は入らない。</span></li>
+      <li><b>HINT</b><span>同じ行・列・3×3ブロックには、同じ数字は入らない。</span></li>
     </ul>
-    <button class="big-btn" id="startBtn" type="button">撃ち始める</button>
+    <div class="modes">
+      <button class="mode-btn" type="button" data-mode="nine"><b>ラピッドナイン</b><span>3×3の的に、1→9の順で「入る場所」を撃つ</span></button>
+      <button class="mode-btn alt" type="button" data-mode="sniper"><b>スナイパー</b><span>的は1マス。「入る数字」を選んで撃つ</span></button>
+    </div>
     <div class="stage-pick">
       <span class="lbl">開始ステージ（試作用）</span>
       <div class="row" id="stagePick"></div>
     </div>
-    <div class="best">ベストスコア <b id="bestTitle">—</b>　·　音が出ます</div>
+    <div class="best">ベスト　ナイン <b id="bestNine">—</b>　·　スナイパー <b id="bestSniper">—</b>　·　音が出ます</div>
   </section>
 
   <section class="screen" id="game" hidden>
@@ -187,8 +211,17 @@ var STAGES = [
   {name:"HARD",    pre:1, keep:12, guide:false, desc:"手がかりが減る。"},
   {name:"EXPERT",  pre:0, keep:0,  guide:false, desc:"空っぽの的。9発すべて撃ち抜け。"}
 ];
+var STAGES_SNIPER = [
+  {name:"EASY",    keep:16, decor:0.2,  guide:true,  desc:"ガイドつき。的と同じ行・列・ブロックが明るくなる。"},
+  {name:"NORMAL",  keep:12, decor:0.3,  guide:false, desc:"ガイドなし。行・列・ブロックを自分で見る。"},
+  {name:"NORMAL+", keep:10, decor:0.4,  guide:false, desc:"手がかりが減り、関係ない数字が増える。"},
+  {name:"HARD",    keep:9,  decor:0.5,  guide:false, desc:"手がかりはぎりぎり。"},
+  {name:"EXPERT",  keep:0,  decor:0.55, guide:false, desc:"最小限の手がかりと、たくさんのノイズ。"}
+];
+var MODE = "nine";        // "nine" = 3x3 place-the-digits, "sniper" = one target cell, choose the digit
+function stages(){return MODE==="sniper"?STAGES_SNIPER:STAGES}
 var SPEED_WINDOW = 3000;   // ms: faster than this earns a speed bonus
-var FEVER_STREAK = 3;      // perfect targets in a row to start fever
+var FEVER_STREAK_BY_MODE = {nine:3, sniper:5};   // perfect targets in a row to start fever
 var FEVER_MS = 10000;
 
 // ---------- geometry ----------
@@ -238,10 +271,22 @@ function makePuzzle(st){
   return {sol:sol,pre:pre,clues:clues,decor:decor,pos:pos};
 }
 
+// one-shot: the target cell's digit must be the only one missing from its row, column and box clues
+function peersOf(t){var r=R(t),c=C(t),out=[];for(var i=0;i<81;i++){if(i===t)continue;
+  if(R(i)===r||C(i)===c||((R(i)/3|0)===(r/3|0)&&(C(i)/3|0)===(c/3|0)))out.push(i)}return out}
+function candCount(clues,sol){var m=0;clues.forEach(function(i){m|=1<<sol[i]});var n=0;for(var d=1;d<=9;d++)if(!(m&(1<<d)))n++;return n}
+function makePuzzleSniper(st){
+  var sol=genSolution(),t=Math.random()*81|0,peers=peersOf(t),clues=new Set(peers),order=shuffle(peers.slice());
+  for(var k=0;k<order.length&&clues.size>st.keep;k++){clues.delete(order[k]);if(candCount(clues,sol)!==1)clues.add(order[k])}
+  var decor=new Set();for(var i=0;i<81;i++){if(i!==t&&peers.indexOf(i)<0&&Math.random()<st.decor)decor.add(i)}
+  return {sol:sol,t:t,clues:clues,decor:decor,peers:peers};
+}
+
 // ---------- storage ----------
 var BEST_KEY="rapid-nine-best";
-function loadBest(){try{return +localStorage.getItem(BEST_KEY)||0}catch(e){return 0}}
-function saveBest(v){try{localStorage.setItem(BEST_KEY,String(v))}catch(e){}}
+function bestKey(m){return m==="sniper"?BEST_KEY+"-sniper":BEST_KEY}
+function loadBest(m){try{return +localStorage.getItem(bestKey(m||MODE))||0}catch(e){return 0}}
+function saveBest(v){try{localStorage.setItem(bestKey(MODE),String(v))}catch(e){}}
 
 // ---------- audio ----------
 var ac=null,soundOn=true,noiseBuf=null;
@@ -325,21 +370,22 @@ STAGES.forEach(function(s,k){var b=document.createElement("button");b.type="butt
 var S=null;
 function newRun(stage){
   S={stage:stage,tIndex:0,score:0,combo:0,maxCombo:0,hits:0,misses:0,targets:0,perfectStreak:0,feverUntil:0,
-     startTime:performance.now(),lastShot:0,busy:false,guide:STAGES[stage].guide,puzzle:null,shot:new Set(),targetMissed:false};
+     startTime:performance.now(),lastShot:0,busy:false,guide:stages()[stage].guide,puzzle:null,shot:new Set(),targetMissed:false};
 }
-function nextDigit(){for(var d=1;d<=9;d++){if(!S.puzzle.pre.has(d)&&!S.shot.has(d))return d}return 0}
+function nextDigit(){if(MODE==="sniper")return S.puzzle&&!S.sniperDone?1:0;for(var d=1;d<=9;d++){if(!S.puzzle.pre.has(d)&&!S.shot.has(d))return d}return 0}
 function fever(){return performance.now()<S.feverUntil}
 
 function loadTarget(){
-  var st=STAGES[S.stage];
-  S.puzzle=makePuzzle(st);S.shot=new Set();S.targetMissed=false;S.lastShot=performance.now();
+  var st=stages()[S.stage];
+  S.puzzle=MODE==="sniper"?makePuzzleSniper(st):makePuzzle(st);S.shot=new Set();S.sniperDone=false;S.targetMissed=false;S.lastShot=performance.now();
   board.classList.remove("enter");void board.offsetWidth;board.classList.add("enter");
   render();
 }
 function render(){
+  if(MODE==="sniper")return renderSniper();
   var P=S.puzzle,d=nextDigit();
   cells.forEach(function(el,i){
-    el.classList.remove("ray","key","why","hitnow","miss","gone","pre","shot");
+    el.classList.remove("ray","key","why","hitnow","miss","gone","pre","shot","aim","zone");el.classList.toggle("t",inT(i));
     var v=P.sol[i];
     if(inT(i)){
       if(P.pre.has(v)){el.classList.add("pre");el.innerHTML="<span>"+v+"</span>"}
@@ -352,6 +398,39 @@ function render(){
   var mh="";for(var k=1;k<=9;k++){var cls=P.pre.has(k)?"pre":S.shot.has(k)?"spent":(k===d?"now":"");mh+='<span class="'+cls+'">'+k+'</span>'}
   magEl.innerHTML=mh;
   hud();
+}
+function renderSniper(){
+  var P=S.puzzle;
+  cells.forEach(function(el,i){
+    el.classList.remove("ray","key","why","hitnow","miss","gone","pre","shot","aim","zone","t");
+    if(i===P.t){el.classList.add("aim");el.textContent=S.sniperDone?"":""}
+    else el.textContent=(P.clues.has(i)||P.decor.has(i))?P.sol[i]:"";
+  });
+  if(S.guide)P.peers.forEach(function(i){cells[i].classList.add("zone")});
+  callout.innerHTML='この的に入る数字は？';
+  if(!magEl.classList.contains("ammo")){
+    magEl.classList.add("ammo");var h="";for(var k=1;k<=9;k++)h+='<button type="button" class="round" data-d="'+k+'" aria-label="'+k+'を撃つ">'+k+'</button>';magEl.innerHTML=h;
+  }
+  hud();
+}
+function fireSniper(d){
+  if(!S||S.busy||S.sniperDone)return;
+  var P=S.puzzle,v=P.sol[P.t],el=cells[P.t],pt=centerOf(el),now=performance.now(),btn=magEl.querySelector('[data-d="'+d+'"]');
+  if(d===v){
+    var dt=now-S.lastShot,speed=Math.max(0,Math.round(100*(1-dt/SPEED_WINDOW)));
+    S.combo++;S.maxCombo=Math.max(S.maxCombo,S.combo);S.hits++;
+    S.score+=(100+speed+Math.min(S.combo,30)*10)*(fever()?2:1);S.lastShot=now;S.sniperDone=true;
+    el.classList.add("shot");el.innerHTML="<span>"+v+"</span>";hud();
+    retrigger(el,"hitnow");retrigger(app,"shake");retrigger(comboEl,"pop");
+    flash(pt.x,pt.y,pt.rect.width*1.2);sparks(pt.x,pt.y,22,["#fff4d6","#e0a948","#ff5a3c"],7);
+    sfx.hit(S.combo);buzz(12);breakTarget();
+  } else {
+    S.misses++;S.combo=0;S.targetMissed=true;hud();
+    retrigger(el,"miss");if(btn)retrigger(btn,"dud");sparks(pt.x,pt.y,6,["#ff5a3c","#5a1f17"],3);sfx.miss();buzz([30,40,30]);
+    var why=[];P.clues.forEach(function(k){if(P.sol[k]===d)why.push(k)});
+    why.forEach(function(k){cells[k].classList.add("why")});
+    setTimeout(function(){why.forEach(function(k){cells[k].classList.remove("why")})},700);
+  }
 }
 function drawGuide(d){
   var P=S.puzzle;
@@ -381,7 +460,7 @@ function gaugeLoop(){
 }
 
 function onShoot(e){
-  if(!S||S.busy)return;
+  if(!S||S.busy||MODE!=="nine")return;
   var el=e.target.closest(".cell");if(!el)return;var i=+el.dataset.i;if(!inT(i))return;
   e.preventDefault();
   var P=S.puzzle,d=nextDigit(),v=P.sol[i];if(!d)return;
@@ -414,25 +493,26 @@ function explainMiss(i,d){
 function breakTarget(){
   S.busy=true;S.targets++;
   var perfect=!S.targetMissed;S.score+=(perfect?500:300)*(fever()?2:1);
-  if(perfect){S.perfectStreak++;if(S.perfectStreak>=FEVER_STREAK){S.feverUntil=performance.now()+FEVER_MS;S.perfectStreak=0}}else S.perfectStreak=0;
+  if(perfect){S.perfectStreak++;if(S.perfectStreak>=FEVER_STREAK_BY_MODE[MODE]){S.feverUntil=performance.now()+FEVER_MS;S.perfectStreak=0}}else S.perfectStreak=0;
   hud();
   setTimeout(function(){
-    TARGET.forEach(function(i){var p=centerOf(cells[i]);shards(p.rect,"#3a4558");sparks(p.x,p.y,5,["#e0a948","#fff4d6"],7);cells[i].classList.add("gone")});
-    var mid=centerOf(cells[40]);flash(mid.x,mid.y,mid.rect.width*3);
+    var hitCells=MODE==="sniper"?[S.puzzle.t]:TARGET;
+    hitCells.forEach(function(i){var p=centerOf(cells[i]);shards(p.rect,"#3a4558");sparks(p.x,p.y,5,["#e0a948","#fff4d6"],7);cells[i].classList.add("gone")});
+    var mid=centerOf(cells[hitCells.length===1?hitCells[0]:40]);flash(mid.x,mid.y,mid.rect.width*3);
     retrigger(app,"bigshake");sfx.brk();buzz(60);
     setTimeout(function(){
       S.tIndex++;
       if(S.tIndex>=TARGETS_PER_STAGE){
-        if(S.stage>=STAGES.length-1){finish(true);return}
-        S.stage++;S.tIndex=0;S.guide=STAGES[S.stage].guide;stageBanner(function(){loadTarget();S.busy=false});
+        if(S.stage>=stages().length-1){finish(true);return}
+        S.stage++;S.tIndex=0;S.guide=stages()[S.stage].guide;stageBanner(function(){loadTarget();S.busy=false});
       } else {loadTarget();S.busy=false}
     },380);
   },140);
 }
 function stageBanner(done){
-  var st=STAGES[S.stage],b=$("banner");
-  $("bannerS").textContent="STAGE "+(S.stage+1)+" / "+STAGES.length;$("bannerT").textContent=st.name;
-  $("bannerD").textContent="的に最初から入っている数字："+st.pre+"個。"+st.desc;
+  var st=stages()[S.stage],b=$("banner");
+  $("bannerS").textContent=(MODE==="sniper"?"SNIPER · ":"")+"STAGE "+(S.stage+1)+" / "+stages().length;$("bannerT").textContent=st.name;
+  $("bannerD").textContent=MODE==="sniper"?st.desc:"的に最初から入っている数字："+st.pre+"個。"+st.desc;
   b.hidden=false;retrigger(b,"show");sfx.stage();
   setTimeout(function(){b.hidden=true;done()},1500);
 }
@@ -448,15 +528,16 @@ function finish(cleared){
   $("rTargets").textContent=S.targets;
   show("result");refreshBest();
 }
-function refreshBest(){var b=loadBest();$("bestTitle").textContent=b?b.toLocaleString("en-US"):"—"}
+function refreshBest(){var a=loadBest("nine"),b=loadBest("sniper");$("bestNine").textContent=a?a.toLocaleString("en-US"):"—";$("bestSniper").textContent=b?b.toLocaleString("en-US"):"—"}
 
 function start(){
-  audio();newRun(startStage);show("game");$("confirm").hidden=true;
+  audio();magEl.classList.remove("ammo");magEl.innerHTML="";newRun(startStage);show("game");$("confirm").hidden=true;
   S.busy=true;stageBanner(function(){loadTarget();S.busy=false});
   requestAnimationFrame(gaugeLoop);
 }
 board.addEventListener("pointerdown",onShoot);
-$("startBtn").addEventListener("click",start);
+[].forEach.call(document.querySelectorAll(".mode-btn"),function(b){b.addEventListener("click",function(){MODE=b.dataset.mode;start()})});
+magEl.addEventListener("pointerdown",function(e){if(MODE!=="sniper")return;var b=e.target.closest(".round");if(!b)return;e.preventDefault();fireSniper(+b.dataset.d)});
 $("againBtn").addEventListener("click",start);
 $("titleBtn").addEventListener("click",function(){show("title")});
 $("quitBtn").addEventListener("click",function(){$("confirm").hidden=false});
@@ -465,12 +546,14 @@ $("confirmYes").addEventListener("click",function(){$("confirm").hidden=true;fin
 $("guideBtn").addEventListener("click",function(){if(!S)return;S.guide=!S.guide;render()});
 $("soundBtn").addEventListener("click",function(){soundOn=!soundOn;this.setAttribute("aria-pressed",soundOn?"true":"false");this.textContent=soundOn?"音 ON":"音 OFF"});
 document.addEventListener("keydown",function(e){ // desktop: numpad 1-9 maps to target cells
-  if(!S||screens.game.hidden)return;var map={"7":30,"8":31,"9":32,"4":39,"5":40,"6":41,"1":48,"2":49,"3":50},i=map[e.key];
+  if(!S||screens.game.hidden)return;
+  if(MODE==="sniper"){if(/^[1-9]$/.test(e.key))fireSniper(+e.key);return}
+  var map={"7":30,"8":31,"9":32,"4":39,"5":40,"6":41,"1":48,"2":49,"3":50},i=map[e.key];
   if(i!==undefined)onShoot({target:cells[i],preventDefault:function(){}});
 });
 refreshBest();
 // test hook
-window.__rapidNine={state:function(){return S},makePuzzle:makePuzzle,deducible:deducible,STAGES:STAGES};
+window.__rapidNine={state:function(){return S},mode:function(){return MODE},makePuzzle:makePuzzle,makePuzzleSniper:makePuzzleSniper,candCount:candCount,deducible:deducible,STAGES:STAGES,STAGES_SNIPER:STAGES_SNIPER};
 })();
 </script>
 <!-- wrapper -->
