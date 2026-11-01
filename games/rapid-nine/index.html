@@ -73,11 +73,7 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .board.enter{animation:enter .26s ease-out}
 @keyframes enter{0%{transform:translateX(115%) rotate(4deg)}100%{transform:none}}
 .cell{display:grid;place-items:center;background:var(--cell);font-family:var(--f-mono);font-weight:600;font-size:calc(40cqi / var(--cols));color:var(--clue);position:relative;min-width:0;min-height:0}
-.cell.c2,.cell.c5{margin-right:2px}.cell.r2,.cell.r5{margin-bottom:2px}
-.board[data-v="block"] .cell{margin:0}
 .board[data-v="block"]{gap:2px}
-.board[data-v="h"] .cell{margin-bottom:0}
-.board[data-v="v"] .cell{margin-right:0}
 .board[data-v="block"] .cell:not(.aim){color:var(--bone)}
 .cell.ray{background:#2a1a1a}
 .cell.key{color:var(--hit);background:#3d1d18}
@@ -102,8 +98,8 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .cell.aim.hitnow{animation:hitcell .32s ease-out}
 .cell.aim.hitnow span{display:inline-block;animation:slam .22s cubic-bezier(.2,1.6,.4,1)}
 .cell.aim.miss{animation:miss .3s ease-out}
-.mag.ammo{grid-template-columns:repeat(3,1fr);gap:6px}
-.mag .round{border:0;border-radius:10px;background:var(--plate);height:clamp(44px,6.5vh,56px);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0;font-family:var(--f-display);font-size:24px;color:var(--bone);touch-action:manipulation}
+.mag.ammo{--ks:clamp(48px,7.5vh,64px);grid-template-columns:repeat(3,var(--ks));justify-content:center;gap:8px}
+.mag .round{border:0;border-radius:10px;background:var(--plate);width:var(--ks);height:var(--ks);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;font-family:var(--f-display);font-size:22px;color:var(--bone);touch-action:manipulation}
 .mag .round::before{content:"";width:9px;height:20px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--brass) 0 38%,#b07f2c 38% 100%)}
 .mag .round:active{transform:scale(.94);background:var(--rail)}
 .mag .round.dud{animation:dud .3s ease-out}
@@ -125,14 +121,13 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 @keyframes fresh{from{opacity:.35;transform:scale(.97)}to{opacity:1;transform:none}}
 .dc{border-radius:6px;display:grid;place-items:center;font-family:var(--f-display);font-size:calc(55cqi / var(--n));position:relative;min-width:0;min-height:0}
 .dc.slot{background:var(--plate)}
-.dc.bx{margin-right:5px}.dc.by{margin-bottom:5px}
 .dc.tgt{background:var(--rail)}
 .dc.tgt::after{content:"";position:absolute;inset:14%;border:2px solid var(--hit);border-radius:50%}
 .dc.tgt::before{content:"";position:absolute;inset:0;background:linear-gradient(var(--hit),var(--hit)) center/2px 36% no-repeat,linear-gradient(var(--hit),var(--hit)) center/36% 2px no-repeat}
 .dc.tgt.miss{animation:miss .3s ease-out}
 .dc.why{outline:3px solid var(--bone);outline-offset:-3px}
-.dkeys{display:grid;gap:8px}
-.dk{border:0;border-radius:12px;background:var(--plate);font-family:var(--f-display);font-size:30px;height:var(--kh,56px);border-bottom:4px solid currentColor;padding:0;touch-action:manipulation}
+.dkeys{display:grid;gap:10px;justify-content:center}
+.dk{border:0;border-radius:12px;background:var(--plate);font-family:var(--f-display);font-size:30px;width:var(--ks,56px);height:var(--ks,56px);border-bottom:4px solid currentColor;padding:0;touch-action:manipulation}
 .dk:active{transform:scale(.95);background:var(--rail)}
 .dkeys.locked .dk{opacity:.3}
 .dstat{font-family:var(--f-mono);font-size:11px;color:var(--dim);text-align:center;height:16px}
@@ -184,7 +179,7 @@ canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-in
     <div class="modes">
       <button class="mode-btn" type="button" data-mode="nine"><b>ラピッドナイン</b><span>3×3の的に、1→9の順で「入る場所」を撃つ</span></button>
       <button class="mode-btn alt" type="button" data-mode="sniper"><b>スナイパー</b><span>的は1マス。「入る数字」を選んで撃つ</span></button>
-      <button class="mode-btn alt" type="button" data-mode="draw"><b>クイックドロー</b><span>60秒の早撃ち。見た瞬間に、入る数字を撃つ</span></button>
+      <button class="mode-btn alt" type="button" data-mode="draw"><b>クイックドロー</b><span>10秒の早撃ち。見た瞬間に、入る数字を撃つ</span></button>
     </div>
     <div class="diff-pick" id="drawPick" hidden>
       <span class="lbl">クイックドローの数字の種類</span>
@@ -228,7 +223,7 @@ canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-in
   </section>
 
   <section class="screen" id="draw" hidden>
-    <div class="hud"><span>命中 <b id="dHits">0</b></span><span>連続 <b id="dCombo">0</b></span><span>残り <b id="dTime">60.0</b></span></div>
+    <div class="hud"><span>命中 <b id="dHits">0</b></span><span>連続 <b id="dCombo">0</b></span><span>残り <b id="dTime">10.0</b></span></div>
     <div class="gauge"><span id="dGauge"></span></div>
     <div class="board-wrap"><div class="dboard" id="dBoard" aria-label="盤面"></div></div>
     <div class="dstat" id="dStat"></div>
@@ -472,6 +467,16 @@ function applyView(view){
   board.style.setProperty("--cols",view?view.cols:9);board.style.setProperty("--rows",view?view.rows:9);
   board.style.setProperty("--ar",view?view.cols/view.rows:1);board.style.setProperty("--maxw",view&&view.v==="block"?"340px":"100cqw");
   cells.forEach(function(el,i){el.hidden=vis?!vis.has(i):false});
+  var shown=view?view.cells:cells.map(function(_,i){return i});
+  var rs=shown.map(R),cs=shown.map(C);
+  var g=gridTracks(Math.min.apply(null,rs),Math.max.apply(null,rs),Math.min.apply(null,cs),Math.max.apply(null,cs),3,3,"2px");
+  board.style.gridTemplateColumns=g.cols;board.style.gridTemplateRows=g.rows;
+  shown.forEach(function(i){cells[i].style.gridColumn=g.col[C(i)];cells[i].style.gridRow=g.row[R(i)]});
+}
+// grid tracks with a thin spacer track between boxes: cells all get the same size (square), boxes stay visible
+function gridTracks(r0,r1,c0,c1,bw,bh,sep){
+  function axis(a0,a1,b){var t=[],map={},k=1;for(var a=a0;a<=a1;a++){if(a>a0&&a%b===0){t.push(sep);k++}map[a]=k;t.push("1fr");k++}return {t:t.join(" "),map:map}}
+  var x=axis(c0,c1,bw),y=axis(r0,r1,bh);return {cols:x.t,rows:y.t,col:x.map,row:y.map};
 }
 function render(){
   if(MODE==="sniper")return renderSniper();
@@ -644,7 +649,7 @@ $("drawBack").addEventListener("click",function(){showPick(null)});
 $("sniperBack").addEventListener("click",function(){showSniperPick(false)});
 magEl.addEventListener("pointerdown",function(e){if(MODE!=="sniper")return;var b=e.target.closest(".round");if(!b)return;e.preventDefault();fireSniper(+b.dataset.d)});
 $("againBtn").addEventListener("click",start);
-$("titleBtn").addEventListener("click",function(){show("title")});
+$("titleBtn").addEventListener("click",function(){showPick(null);show("title")});
 $("quitBtn").addEventListener("click",function(){$("confirm").hidden=false});
 $("confirmNo").addEventListener("click",function(){$("confirm").hidden=true});
 $("confirmYes").addEventListener("click",function(){$("confirm").hidden=true;finish(false)});
@@ -662,10 +667,10 @@ refreshBest();
 // ---------- quick draw ----------
 // Only the core deduction is left: the target always sits at the same place, only its row/column/box are drawn,
 // digits are color coded and so are the keys.
-var DRAW_TIME=60000, DRAW_LOCK=400, DSIZE=4;
-var DRAW_CFG={4:{n:4,bw:2,bh:2,tr:1,tc:1,cols:2,kh:"clamp(56px,10vh,80px)"},
-              6:{n:6,bw:3,bh:2,tr:2,tc:2,cols:3,kh:"clamp(50px,8vh,66px)"},
-              9:{n:9,bw:3,bh:3,tr:4,tc:4,cols:3,kh:"clamp(44px,6.5vh,56px)"}};
+var DRAW_TIME=10000, DRAW_LOCK=400, DSIZE=4;
+var DRAW_CFG={4:{n:4,bw:2,bh:2,tr:1,tc:1,cols:2,ks:"clamp(64px,11vh,88px)"},
+              6:{n:6,bw:3,bh:2,tr:2,tc:2,cols:3,ks:"clamp(56px,9vh,76px)"},
+              9:{n:9,bw:3,bh:3,tr:4,tc:4,cols:3,ks:"clamp(48px,7.5vh,64px)"}};
 function genSolutionN(n,bw,bh){
   var g=new Array(n*n).fill(0),ds=[];for(var d=1;d<=n;d++)ds.push(d);
   function ok(i,d){var r=(i/n)|0,c=i%n;for(var k=0;k<n;k++){if(g[r*n+k]===d||g[k*n+c]===d)return false}
@@ -686,7 +691,10 @@ var D=null, dBoard=$("dBoard"), dKeys=$("dKeys");
 function startDraw(){
   audio();var cfg=DRAW_CFG[DSIZE];
   D={cfg:cfg,hits:0,misses:0,combo:0,maxCombo:0,times:[],lockUntil:0,running:false,endAt:0,shownAt:0,p:null};
-  dKeys.style.gridTemplateColumns="repeat("+cfg.cols+",1fr)";dKeys.style.setProperty("--kh",cfg.kh);
+  dKeys.style.gridTemplateColumns="repeat("+cfg.cols+",var(--ks))";dKeys.style.setProperty("--ks",cfg.ks);
+  var g=gridTracks(0,cfg.n-1,0,cfg.n-1,cfg.bw,cfg.bh,"6px");D.grid=g;
+  dBoard.style.gridTemplateColumns=g.cols;dBoard.style.gridTemplateRows=g.rows;
+  var sx=Math.ceil(cfg.n/cfg.bw)-1,sy=Math.ceil(cfg.n/cfg.bh)-1;dBoard.style.aspectRatio=((cfg.n+sx*0.11)/(cfg.n+sy*0.11)).toFixed(4);
   var h="";for(var d=1;d<=cfg.n;d++)h+='<button type="button" class="dk q'+d+'" data-d="'+d+'" aria-label="'+d+'を撃つ">'+d+'</button>';
   dKeys.innerHTML=h;dKeys.classList.remove("locked");
   dBoard.innerHTML="";dBoard.style.setProperty("--n",cfg.n);
@@ -700,11 +708,10 @@ function startDraw(){
 function nextDraw(){
   var cfg=D.cfg,n=cfg.n,P=makeDrawPuzzle(cfg),h="";D.p=P;
   for(var i=0;i<n*n;i++){var r=(i/n)|0,c=i%n,cls="dc";
-    if((c+1)%cfg.bw===0&&c<n-1)cls+=" bx";if((r+1)%cfg.bh===0&&r<n-1)cls+=" by";
     var txt="";
     if(i===P.t)cls+=" tgt";
     else if(P.peers.indexOf(i)>=0){cls+=" slot";if(P.clues.has(i)){txt=P.sol[i];cls+=" q"+txt}}
-    h+='<div class="'+cls+'" data-i="'+i+'">'+txt+'</div>'}
+    h+='<div class="'+cls+'" data-i="'+i+'" style="grid-column:'+D.grid.col[c]+';grid-row:'+D.grid.row[r]+'">'+txt+'</div>'}
   dBoard.innerHTML=h;retrigger(dBoard,"fresh");D.shownAt=performance.now();
 }
 function drawHud(){$("dHits").textContent=D.hits;$("dCombo").textContent=D.combo}
@@ -737,7 +744,7 @@ function finishDraw(){
     stats:[["1発の平均",avg],["最速",fast],["最大連続",D.maxCombo],["命中率",(D.hits+D.misses?Math.round(100*D.hits/(D.hits+D.misses)):0)+"%"]]});
 }
 dKeys.addEventListener("pointerdown",function(e){var b=e.target.closest(".dk");if(!b)return;e.preventDefault();drawFire(+b.dataset.d)});
-$("dQuit").addEventListener("click",function(){if(D)D.running=false;show("title")});
+$("dQuit").addEventListener("click",function(){if(D)D.running=false;showPick(null);show("title")});
 
 // test hook
 window.__rapidNine={state:function(){return S},mode:function(){return MODE},makePuzzle:makePuzzle,makePuzzleSniper:makePuzzleSniper,candCount:candCount,deducible:deducible,STAGES:STAGES,STAGES_SNIPER:STAGES_SNIPER,STAGES_SNIPER_BY:STAGES_SNIPER_BY,setSniper:function(d){SDIFF=d},draw:function(){return D},setDrawTime:function(ms){DRAW_TIME=ms},makeDrawPuzzle:makeDrawPuzzle,DRAW_CFG:DRAW_CFG};
