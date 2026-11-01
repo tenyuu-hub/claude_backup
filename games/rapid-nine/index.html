@@ -102,8 +102,8 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .cell.aim.hitnow{animation:hitcell .32s ease-out}
 .cell.aim.hitnow span{display:inline-block;animation:slam .22s cubic-bezier(.2,1.6,.4,1)}
 .cell.aim.miss{animation:miss .3s ease-out}
-.mag.ammo{gap:5px}
-.mag .round{border:0;border-radius:10px;background:var(--plate);height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;font-family:var(--f-display);font-size:19px;color:var(--bone);touch-action:manipulation}
+.mag.ammo{grid-template-columns:repeat(3,1fr);gap:6px}
+.mag .round{border:0;border-radius:10px;background:var(--plate);height:clamp(44px,6.5vh,56px);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0;font-family:var(--f-display);font-size:24px;color:var(--bone);touch-action:manipulation}
 .mag .round::before{content:"";width:9px;height:20px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--brass) 0 38%,#b07f2c 38% 100%)}
 .mag .round:active{transform:scale(.94);background:var(--rail)}
 .mag .round.dud{animation:dud .3s ease-out}
