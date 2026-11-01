@@ -116,6 +116,26 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .mode-btn.alt b{color:var(--brass)}
 .mode-btn:active{transform:scale(.98)}
 .diff-pick{display:flex;flex-direction:column;gap:10px}
+/* quick draw */
+:root{--q1:#ff5d5d;--q2:#ff9a3c;--q3:#f2d23c;--q4:#8fdc4a;--q5:#2fd3b0;--q6:#4ab3ff;--q7:#8a8dff;--q8:#c779ff;--q9:#ff72b8}
+.q1{color:var(--q1)}.q2{color:var(--q2)}.q3{color:var(--q3)}.q4{color:var(--q4)}.q5{color:var(--q5)}.q6{color:var(--q6)}.q7{color:var(--q7)}.q8{color:var(--q8)}.q9{color:var(--q9)}
+#draw{gap:10px}
+.dboard{--n:9;width:min(100cqw,100cqh);aspect-ratio:1;display:grid;grid-template-columns:repeat(var(--n),1fr);grid-template-rows:repeat(var(--n),1fr);gap:3px;container-type:inline-size}
+.dboard.fresh{animation:fresh .12s ease-out}
+@keyframes fresh{from{opacity:.35;transform:scale(.97)}to{opacity:1;transform:none}}
+.dc{border-radius:6px;display:grid;place-items:center;font-family:var(--f-display);font-size:calc(55cqi / var(--n));position:relative;min-width:0;min-height:0}
+.dc.slot{background:var(--plate)}
+.dc.bx{margin-right:5px}.dc.by{margin-bottom:5px}
+.dc.tgt{background:var(--rail)}
+.dc.tgt::after{content:"";position:absolute;inset:14%;border:2px solid var(--hit);border-radius:50%}
+.dc.tgt::before{content:"";position:absolute;inset:0;background:linear-gradient(var(--hit),var(--hit)) center/2px 36% no-repeat,linear-gradient(var(--hit),var(--hit)) center/36% 2px no-repeat}
+.dc.tgt.miss{animation:miss .3s ease-out}
+.dc.why{outline:3px solid var(--bone);outline-offset:-3px}
+.dkeys{display:grid;gap:8px}
+.dk{border:0;border-radius:12px;background:var(--plate);font-family:var(--f-display);font-size:30px;height:var(--kh,56px);border-bottom:4px solid currentColor;padding:0;touch-action:manipulation}
+.dk:active{transform:scale(.95);background:var(--rail)}
+.dkeys.locked .dk{opacity:.3}
+.dstat{font-family:var(--f-mono);font-size:11px;color:var(--dim);text-align:center;height:16px}
 .diff-pick .lbl{font-family:var(--f-display);font-size:18px;color:var(--brass)}
 .diff-pick .bst{font-style:normal;font-family:var(--f-mono);font-size:11px;color:var(--dim)}
 .callout{text-align:center;font-family:var(--f-display);font-size:16px;height:30px;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -164,6 +184,14 @@ canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-in
     <div class="modes">
       <button class="mode-btn" type="button" data-mode="nine"><b>ラピッドナイン</b><span>3×3の的に、1→9の順で「入る場所」を撃つ</span></button>
       <button class="mode-btn alt" type="button" data-mode="sniper"><b>スナイパー</b><span>的は1マス。「入る数字」を選んで撃つ</span></button>
+      <button class="mode-btn alt" type="button" data-mode="draw"><b>クイックドロー</b><span>60秒の早撃ち。見た瞬間に、入る数字を撃つ</span></button>
+    </div>
+    <div class="diff-pick" id="drawPick" hidden>
+      <span class="lbl">クイックドローの数字の種類</span>
+      <button class="mode-btn alt" type="button" data-size="4"><b>4種類</b><span>4×4。見るのは7マス、ボタンは4つ</span><em class="bst" data-dbest="4"></em></button>
+      <button class="mode-btn alt" type="button" data-size="6"><b>6種類</b><span>6×6。見るのは12マス、ボタンは6つ</span><em class="bst" data-dbest="6"></em></button>
+      <button class="mode-btn alt" type="button" data-size="9"><b>9種類</b><span>9×9。見るのは20マス、ボタンは9つ</span><em class="bst" data-dbest="9"></em></button>
+      <button class="sub-btn" type="button" id="drawBack">戻る</button>
     </div>
     <div class="diff-pick" id="sniperPick" hidden>
       <span class="lbl">スナイパーの難易度</span>
@@ -199,14 +227,24 @@ canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-in
     </div>
   </section>
 
+  <section class="screen" id="draw" hidden>
+    <div class="hud"><span>命中 <b id="dHits">0</b></span><span>連続 <b id="dCombo">0</b></span><span>残り <b id="dTime">60.0</b></span></div>
+    <div class="gauge"><span id="dGauge"></span></div>
+    <div class="board-wrap"><div class="dboard" id="dBoard" aria-label="盤面"></div></div>
+    <div class="dstat" id="dStat"></div>
+    <div class="dkeys" id="dKeys"></div>
+    <div class="foot">
+      <button type="button" id="dQuit">やめる</button>
+      <button type="button" id="dSound" aria-pressed="true">音 ON</button>
+    </div>
+    <div class="banner" id="dBanner" hidden><span class="t" id="dBannerT">READY</span></div>
+  </section>
+
   <section class="screen" id="result" hidden>
     <h2><small id="resultSub">ALL CLEAR</small><span id="resultTitle">全ステージ撃破</span></h2>
     <div class="stats">
-      <div class="stat wide"><span>スコア</span><b id="rScore">0</b><span class="newbest" id="rBest" hidden>ベスト更新！</span></div>
-      <div class="stat"><span>タイム</span><b id="rTime">0:00</b></div>
-      <div class="stat"><span>最大コンボ</span><b id="rCombo">0</b></div>
-      <div class="stat"><span>命中率</span><b id="rAcc">0%</b></div>
-      <div class="stat"><span>砕いた的</span><b id="rTargets">0</b></div>
+      <div class="stat wide"><span id="rBigLabel">スコア</span><b id="rScore">0</b><span class="newbest" id="rBest" hidden>ベスト更新！</span></div>
+      <div id="rStats" style="display:contents"></div>
     </div>
     <button class="big-btn" type="button" id="againBtn">もう一度</button>
     <button class="sub-btn" type="button" id="titleBtn">タイトルへ</button>
@@ -330,7 +368,7 @@ function makePuzzleSniper(st,diff){
 
 // ---------- storage ----------
 var BEST_KEY="rapid-nine-best";
-function bestKey(m,d){return m==="sniper"?BEST_KEY+"-sniper-"+(d||SDIFF):BEST_KEY}
+function bestKey(m,d){if(m==="draw")return BEST_KEY+"-draw-"+(d||DSIZE);return m==="sniper"?BEST_KEY+"-sniper-"+(d||SDIFF):BEST_KEY}
 function loadBest(m,d){try{return +localStorage.getItem(bestKey(m||MODE,d))||0}catch(e){return 0}}
 function saveBest(v){try{localStorage.setItem(bestKey(MODE),String(v))}catch(e){}}
 
@@ -400,7 +438,7 @@ function stepFx(){
 // ---------- DOM ----------
 var $=function(id){return document.getElementById(id)};
 var app=$("app"),board=$("board"),magEl=$("mag"),callout=$("callout"),comboEl=$("combo"),comboN=$("comboN"),gauge=$("gauge");
-var screens={title:$("title"),game:$("game"),result:$("result")};
+var screens={title:$("title"),game:$("game"),draw:$("draw"),result:$("result")};
 function show(name){Object.keys(screens).forEach(function(k){screens[k].hidden=(k!==name)})}
 var cells=[];
 for(var i2=0;i2<81;i2++){var el=document.createElement("div");el.className="cell c"+C(i2)+" r"+R(i2)+(inT(i2)?" t":"");el.dataset.i=i2;board.appendChild(el);cells.push(el)}
@@ -574,26 +612,34 @@ function fmtTime(ms){var s=Math.round(ms/1000);return Math.floor(s/60)+":"+Strin
 function finish(cleared){
   S.busy=true;var t=performance.now()-S.startTime,best=loadBest(),isBest=S.score>best;
   if(isBest)saveBest(S.score);
-  $("resultSub").textContent=cleared?"ALL CLEAR":"STAGE "+(S.stage+1)+" で終了";
-  $("resultTitle").textContent=cleared?"全ステージ撃破":"おつかれさま";
-  $("rScore").textContent=S.score.toLocaleString("en-US");$("rBest").hidden=!isBest;
-  $("rTime").textContent=fmtTime(t);$("rCombo").textContent=S.maxCombo;
-  $("rAcc").textContent=(S.hits+S.misses?Math.round(100*S.hits/(S.hits+S.misses)):0)+"%";
-  $("rTargets").textContent=S.targets;
+  showResult({sub:cleared?"ALL CLEAR":"STAGE "+(S.stage+1)+" で終了",title:cleared?"全ステージ撃破":"おつかれさま",
+    bigLabel:"スコア",big:S.score.toLocaleString("en-US"),isBest:isBest,
+    stats:[["タイム",fmtTime(t)],["最大コンボ",S.maxCombo],["命中率",(S.hits+S.misses?Math.round(100*S.hits/(S.hits+S.misses)):0)+"%"],["砕いた的",S.targets]]});
+}
+function showResult(o){
+  $("resultSub").textContent=o.sub;$("resultTitle").textContent=o.title;$("rBigLabel").textContent=o.bigLabel;
+  $("rScore").textContent=o.big;$("rBest").hidden=!o.isBest;
+  $("rStats").innerHTML=o.stats.map(function(x){return '<div class="stat"><span>'+x[0]+'</span><b>'+x[1]+'</b></div>'}).join("");
   show("result");refreshBest();
 }
 function refreshBest(){var a=loadBest("nine");$("bestNine").textContent=a?a.toLocaleString("en-US"):"—";
-  [].forEach.call(document.querySelectorAll("[data-best]"),function(el){var b=loadBest("sniper",el.dataset.best);el.textContent=b?"ベスト "+b.toLocaleString("en-US"):""})}
+  [].forEach.call(document.querySelectorAll("[data-best]"),function(el){var b=loadBest("sniper",el.dataset.best);el.textContent=b?"ベスト "+b.toLocaleString("en-US"):""});
+  [].forEach.call(document.querySelectorAll("[data-dbest]"),function(el){var b=loadBest("draw",el.dataset.dbest);el.textContent=b?"ベスト "+b+"発":""})}
 
 function start(){
+  if(MODE==="draw"){startDraw();return}
   audio();magEl.classList.remove("ammo");magEl.innerHTML="";newRun(startStage);show("game");$("confirm").hidden=true;
   S.busy=true;stageBanner(function(){loadTarget();S.busy=false});
   requestAnimationFrame(gaugeLoop);
 }
 board.addEventListener("pointerdown",onShoot);
-function showSniperPick(on){document.querySelector(".modes").hidden=on;$("sniperPick").hidden=!on}
+function showPick(id){document.querySelector(".modes").hidden=!!id;$("sniperPick").hidden=id!=="sniperPick";$("drawPick").hidden=id!=="drawPick"}
+function showSniperPick(on){showPick(on?"sniperPick":null)}
 [].forEach.call(document.querySelectorAll(".mode-btn[data-mode]"),function(b){b.addEventListener("click",function(){
-  if(b.dataset.mode==="sniper"){showSniperPick(true);return}MODE="nine";start()})});
+  if(b.dataset.mode==="sniper"){showPick("sniperPick");return}
+  if(b.dataset.mode==="draw"){showPick("drawPick");return}MODE="nine";start()})});
+[].forEach.call(document.querySelectorAll(".mode-btn[data-size]"),function(b){b.addEventListener("click",function(){MODE="draw";DSIZE=+b.dataset.size;start()})});
+$("drawBack").addEventListener("click",function(){showPick(null)});
 [].forEach.call(document.querySelectorAll(".mode-btn[data-diff]"),function(b){b.addEventListener("click",function(){MODE="sniper";SDIFF=b.dataset.diff;start()})});
 $("sniperBack").addEventListener("click",function(){showSniperPick(false)});
 magEl.addEventListener("pointerdown",function(e){if(MODE!=="sniper")return;var b=e.target.closest(".round");if(!b)return;e.preventDefault();fireSniper(+b.dataset.d)});
@@ -603,16 +649,98 @@ $("quitBtn").addEventListener("click",function(){$("confirm").hidden=false});
 $("confirmNo").addEventListener("click",function(){$("confirm").hidden=true});
 $("confirmYes").addEventListener("click",function(){$("confirm").hidden=true;finish(false)});
 $("guideBtn").addEventListener("click",function(){if(!S)return;S.guide=!S.guide;render()});
-$("soundBtn").addEventListener("click",function(){soundOn=!soundOn;this.setAttribute("aria-pressed",soundOn?"true":"false");this.textContent=soundOn?"音 ON":"音 OFF"});
+function toggleSound(){soundOn=!soundOn;["soundBtn","dSound"].forEach(function(id){var b=$(id);b.setAttribute("aria-pressed",soundOn?"true":"false");b.textContent=soundOn?"音 ON":"音 OFF"})}
+$("soundBtn").addEventListener("click",toggleSound);$("dSound").addEventListener("click",toggleSound);
 document.addEventListener("keydown",function(e){ // desktop: numpad 1-9 maps to target cells
+  if(!screens.draw.hidden){if(/^[1-9]$/.test(e.key))drawFire(+e.key);return}
   if(!S||screens.game.hidden)return;
   if(MODE==="sniper"){if(/^[1-9]$/.test(e.key))fireSniper(+e.key);return}
   var map={"7":30,"8":31,"9":32,"4":39,"5":40,"6":41,"1":48,"2":49,"3":50},i=map[e.key];
   if(i!==undefined)onShoot({target:cells[i],preventDefault:function(){}});
 });
 refreshBest();
+// ---------- quick draw ----------
+// Only the core deduction is left: the target always sits at the same place, only its row/column/box are drawn,
+// digits are color coded and so are the keys.
+var DRAW_TIME=60000, DRAW_LOCK=400, DSIZE=4;
+var DRAW_CFG={4:{n:4,bw:2,bh:2,tr:1,tc:1,cols:2,kh:"clamp(56px,10vh,80px)"},
+              6:{n:6,bw:3,bh:2,tr:2,tc:2,cols:3,kh:"clamp(50px,8vh,66px)"},
+              9:{n:9,bw:3,bh:3,tr:4,tc:4,cols:3,kh:"clamp(44px,6.5vh,56px)"}};
+function genSolutionN(n,bw,bh){
+  var g=new Array(n*n).fill(0),ds=[];for(var d=1;d<=n;d++)ds.push(d);
+  function ok(i,d){var r=(i/n)|0,c=i%n;for(var k=0;k<n;k++){if(g[r*n+k]===d||g[k*n+c]===d)return false}
+    var br=r-r%bh,bc=c-c%bw;for(var y=0;y<bh;y++)for(var x=0;x<bw;x++)if(g[(br+y)*n+bc+x]===d)return false;return true}
+  function fill(i){if(i===n*n)return true;var o=shuffle(ds.slice());for(var k=0;k<n;k++){if(ok(i,o[k])){g[i]=o[k];if(fill(i+1))return true;g[i]=0}}return false}
+  fill(0);return g;
+}
+function makeDrawPuzzle(cfg){
+  var n=cfg.n,sol=genSolutionN(n,cfg.bw,cfg.bh),t=cfg.tr*n+cfg.tc,peers=[];
+  for(var i=0;i<n*n;i++){if(i===t)continue;var r=(i/n)|0,c=i%n;
+    if(r===cfg.tr||c===cfg.tc||((r/cfg.bh|0)===(cfg.tr/cfg.bh|0)&&(c/cfg.bw|0)===(cfg.tc/cfg.bw|0)))peers.push(i)}
+  function cands(cl){var m=0;cl.forEach(function(i){m|=1<<sol[i]});var k=0;for(var d=1;d<=n;d++)if(!(m&(1<<d)))k++;return k}
+  var clues=new Set(peers),order=shuffle(peers.slice());
+  order.forEach(function(i){clues.delete(i);if(cands(clues)!==1)clues.add(i)});   // minimal: only what the deduction needs
+  return {sol:sol,t:t,peers:peers,clues:clues,n:n};
+}
+var D=null, dBoard=$("dBoard"), dKeys=$("dKeys");
+function startDraw(){
+  audio();var cfg=DRAW_CFG[DSIZE];
+  D={cfg:cfg,hits:0,misses:0,combo:0,maxCombo:0,times:[],lockUntil:0,running:false,endAt:0,shownAt:0,p:null};
+  dKeys.style.gridTemplateColumns="repeat("+cfg.cols+",1fr)";dKeys.style.setProperty("--kh",cfg.kh);
+  var h="";for(var d=1;d<=cfg.n;d++)h+='<button type="button" class="dk q'+d+'" data-d="'+d+'" aria-label="'+d+'を撃つ">'+d+'</button>';
+  dKeys.innerHTML=h;dKeys.classList.remove("locked");
+  dBoard.innerHTML="";dBoard.style.setProperty("--n",cfg.n);
+  $("dTime").textContent=(DRAW_TIME/1000).toFixed(1);$("dGauge").style.width="100%";$("dStat").textContent="";drawHud();
+  show("draw");
+  var b=$("dBanner"),bt=$("dBannerT");b.hidden=false;bt.textContent="READY";retrigger(b,"show");
+  setTimeout(function(){if(screens.draw.hidden)return;bt.textContent="DRAW!";retrigger(b,"show");sfx.stage();
+    D.running=true;D.endAt=performance.now()+DRAW_TIME;nextDraw();requestAnimationFrame(drawLoop);
+    setTimeout(function(){b.hidden=true},300)},800);
+}
+function nextDraw(){
+  var cfg=D.cfg,n=cfg.n,P=makeDrawPuzzle(cfg),h="";D.p=P;
+  for(var i=0;i<n*n;i++){var r=(i/n)|0,c=i%n,cls="dc";
+    if((c+1)%cfg.bw===0&&c<n-1)cls+=" bx";if((r+1)%cfg.bh===0&&r<n-1)cls+=" by";
+    var txt="";
+    if(i===P.t)cls+=" tgt";
+    else if(P.peers.indexOf(i)>=0){cls+=" slot";if(P.clues.has(i)){txt=P.sol[i];cls+=" q"+txt}}
+    h+='<div class="'+cls+'" data-i="'+i+'">'+txt+'</div>'}
+  dBoard.innerHTML=h;retrigger(dBoard,"fresh");D.shownAt=performance.now();
+}
+function drawHud(){$("dHits").textContent=D.hits;$("dCombo").textContent=D.combo}
+function drawLoop(){
+  if(!D||!D.running)return;
+  var left=Math.max(0,D.endAt-performance.now());
+  $("dTime").textContent=(left/1000).toFixed(1);$("dGauge").style.width=(100*left/DRAW_TIME)+"%";
+  if(left<=0){finishDraw();return}
+  requestAnimationFrame(drawLoop);
+}
+function drawFire(d){
+  if(!D||!D.running)return;var now=performance.now();if(now<D.lockUntil||d>D.cfg.n)return;
+  var P=D.p,tEl=dBoard.querySelector('[data-i="'+P.t+'"]'),pt=centerOf(tEl);
+  if(d===P.sol[P.t]){
+    var dt=now-D.shownAt;D.times.push(dt);D.hits++;D.combo++;D.maxCombo=Math.max(D.maxCombo,D.combo);
+    flash(pt.x,pt.y,pt.rect.width);sparks(pt.x,pt.y,12,["#fff4d6","#e0a948","#ff5a3c"],6);sfx.hit(D.combo);buzz(8);
+    $("dStat").textContent=(dt/1000).toFixed(2)+" 秒";drawHud();nextDraw();
+  } else {
+    D.misses++;D.combo=0;D.lockUntil=now+DRAW_LOCK;drawHud();
+    retrigger(tEl,"miss");sfx.miss();buzz([30,40,30]);dKeys.classList.add("locked");$("dStat").textContent="MISS";
+    var why=[].filter.call(dBoard.children,function(el){return el.textContent===String(d)});why.forEach(function(el){el.classList.add("why")});
+    setTimeout(function(){dKeys.classList.remove("locked");why.forEach(function(el){el.classList.remove("why")})},DRAW_LOCK);
+  }
+}
+function finishDraw(){
+  D.running=false;var best=loadBest("draw"),isBest=D.hits>best;if(isBest)saveBest(D.hits);
+  var avg=D.times.length?(D.times.reduce(function(a,b){return a+b},0)/D.times.length/1000).toFixed(2)+" 秒":"—";
+  var fast=D.times.length?(Math.min.apply(null,D.times)/1000).toFixed(2)+" 秒":"—";
+  showResult({sub:"QUICK DRAW · "+DSIZE+"種類",title:"タイムアップ",bigLabel:"命中",big:D.hits+" 発",isBest:isBest,
+    stats:[["1発の平均",avg],["最速",fast],["最大連続",D.maxCombo],["命中率",(D.hits+D.misses?Math.round(100*D.hits/(D.hits+D.misses)):0)+"%"]]});
+}
+dKeys.addEventListener("pointerdown",function(e){var b=e.target.closest(".dk");if(!b)return;e.preventDefault();drawFire(+b.dataset.d)});
+$("dQuit").addEventListener("click",function(){if(D)D.running=false;show("title")});
+
 // test hook
-window.__rapidNine={state:function(){return S},mode:function(){return MODE},makePuzzle:makePuzzle,makePuzzleSniper:makePuzzleSniper,candCount:candCount,deducible:deducible,STAGES:STAGES,STAGES_SNIPER:STAGES_SNIPER,STAGES_SNIPER_BY:STAGES_SNIPER_BY,setSniper:function(d){SDIFF=d}};
+window.__rapidNine={state:function(){return S},mode:function(){return MODE},makePuzzle:makePuzzle,makePuzzleSniper:makePuzzleSniper,candCount:candCount,deducible:deducible,STAGES:STAGES,STAGES_SNIPER:STAGES_SNIPER,STAGES_SNIPER_BY:STAGES_SNIPER_BY,setSniper:function(d){SDIFF=d},draw:function(){return D},setDrawTime:function(ms){DRAW_TIME=ms},makeDrawPuzzle:makeDrawPuzzle,DRAW_CFG:DRAW_CFG};
 })();
 </script>
 <!-- wrapper -->
