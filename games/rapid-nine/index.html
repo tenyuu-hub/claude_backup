@@ -156,7 +156,7 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
 
 /* result */
-#result{justify-content:center;gap:18px}
+#result{justify-content:safe center;gap:14px;overflow-y:auto}
 #result h2{font-family:var(--f-display);font-weight:400;font-size:36px;margin:0;line-height:1.15}
 #result h2 small{display:block;font-family:var(--f-mono);font-size:12px;color:var(--brass);letter-spacing:.2em}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -179,7 +179,7 @@ canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-in
     <div class="modes">
       <button class="mode-btn" type="button" data-mode="nine"><b>ラピッドナイン</b><span>3×3の的に、1→9の順で「入る場所」を撃つ</span></button>
       <button class="mode-btn alt" type="button" data-mode="sniper"><b>スナイパー</b><span>的は1マス。「入る数字」を選んで撃つ</span></button>
-      <button class="mode-btn alt" type="button" data-mode="draw"><b>クイックドロー</b><span>10秒の早撃ち。見た瞬間に、入る数字を撃つ</span></button>
+      <button class="mode-btn alt" type="button" data-mode="draw"><b>クイックドロー</b><span>20秒の早撃ち。見た瞬間に、入る数字を撃つ</span></button>
     </div>
     <div class="diff-pick" id="drawPick" hidden>
       <span class="lbl">クイックドローの数字の種類</span>
@@ -223,7 +223,7 @@ canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-in
   </section>
 
   <section class="screen" id="draw" hidden>
-    <div class="hud"><span>命中 <b id="dHits">0</b></span><span>連続 <b id="dCombo">0</b></span><span>残り <b id="dTime">10.0</b></span></div>
+    <div class="hud"><span>SCORE <b id="dScore">0</b></span><span>命中 <b id="dHits">0</b> · 連続 <b id="dCombo">0</b></span><span>残り <b id="dTime">20.0</b></span></div>
     <div class="gauge"><span id="dGauge"></span></div>
     <div class="board-wrap"><div class="dboard" id="dBoard" aria-label="盤面"></div></div>
     <div class="dstat" id="dStat"></div>
@@ -363,7 +363,7 @@ function makePuzzleSniper(st,diff){
 
 // ---------- storage ----------
 var BEST_KEY="rapid-nine-best";
-function bestKey(m,d){if(m==="draw")return BEST_KEY+"-draw-"+(d||DSIZE);return m==="sniper"?BEST_KEY+"-sniper-"+(d||SDIFF):BEST_KEY}
+function bestKey(m,d){if(m==="draw")return BEST_KEY+"-drawscore-"+(d||DSIZE);return m==="sniper"?BEST_KEY+"-sniper-"+(d||SDIFF):BEST_KEY}
 function loadBest(m,d){try{return +localStorage.getItem(bestKey(m||MODE,d))||0}catch(e){return 0}}
 function saveBest(v){try{localStorage.setItem(bestKey(MODE),String(v))}catch(e){}}
 
@@ -629,7 +629,7 @@ function showResult(o){
 }
 function refreshBest(){var a=loadBest("nine");$("bestNine").textContent=a?a.toLocaleString("en-US"):"—";
   [].forEach.call(document.querySelectorAll("[data-best]"),function(el){var b=loadBest("sniper",el.dataset.best);el.textContent=b?"ベスト "+b.toLocaleString("en-US"):""});
-  [].forEach.call(document.querySelectorAll("[data-dbest]"),function(el){var b=loadBest("draw",el.dataset.dbest);el.textContent=b?"ベスト "+b+"発":""})}
+  [].forEach.call(document.querySelectorAll("[data-dbest]"),function(el){var b=loadBest("draw",el.dataset.dbest);el.textContent=b?"ベスト "+b.toLocaleString("en-US")+"点":""})}
 
 function start(){
   if(MODE==="draw"){startDraw();return}
@@ -667,7 +667,9 @@ refreshBest();
 // ---------- quick draw ----------
 // Only the core deduction is left: the target always sits at the same place, only its row/column/box are drawn,
 // digits are color coded and so are the keys.
-var DRAW_TIME=10000, DRAW_LOCK=400, DSIZE=4;
+var DRAW_TIME=20000, DRAW_LOCK=400, DSIZE=4;
+// score per hit = 100 + speed bonus (up to 200, shrinking to 0 at 2 s) + combo bonus (10 per hit in a row, up to 200)
+function drawPoints(dt,combo){var speed=Math.max(0,Math.round(200*(1-dt/2000)));var chain=Math.min(combo-1,20)*10;return {base:100,speed:speed,chain:chain,total:100+speed+chain}}
 var DRAW_CFG={4:{n:4,bw:2,bh:2,tr:1,tc:1,cols:2,ks:"clamp(64px,11vh,88px)"},
               6:{n:6,bw:3,bh:2,tr:2,tc:2,cols:3,ks:"clamp(56px,9vh,76px)"},
               9:{n:9,bw:3,bh:3,tr:4,tc:4,cols:3,ks:"clamp(48px,7.5vh,64px)"}};
@@ -690,7 +692,7 @@ function makeDrawPuzzle(cfg){
 var D=null, dBoard=$("dBoard"), dKeys=$("dKeys");
 function startDraw(){
   audio();var cfg=DRAW_CFG[DSIZE];
-  D={cfg:cfg,hits:0,misses:0,combo:0,maxCombo:0,times:[],lockUntil:0,running:false,endAt:0,shownAt:0,p:null};
+  D={cfg:cfg,score:0,speedSum:0,chainSum:0,hits:0,misses:0,combo:0,maxCombo:0,times:[],lockUntil:0,running:false,endAt:0,shownAt:0,p:null};
   dKeys.style.gridTemplateColumns="repeat("+cfg.cols+",var(--ks))";dKeys.style.setProperty("--ks",cfg.ks);
   var g=gridTracks(0,cfg.n-1,0,cfg.n-1,cfg.bw,cfg.bh,"6px");D.grid=g;
   dBoard.style.gridTemplateColumns=g.cols;dBoard.style.gridTemplateRows=g.rows;
@@ -714,7 +716,7 @@ function nextDraw(){
     h+='<div class="'+cls+'" data-i="'+i+'" style="grid-column:'+D.grid.col[c]+';grid-row:'+D.grid.row[r]+'">'+txt+'</div>'}
   dBoard.innerHTML=h;retrigger(dBoard,"fresh");D.shownAt=performance.now();
 }
-function drawHud(){$("dHits").textContent=D.hits;$("dCombo").textContent=D.combo}
+function drawHud(){$("dScore").textContent=D.score.toLocaleString("en-US");$("dHits").textContent=D.hits;$("dCombo").textContent=D.combo}
 function drawLoop(){
   if(!D||!D.running)return;
   var left=Math.max(0,D.endAt-performance.now());
@@ -728,7 +730,8 @@ function drawFire(d){
   if(d===P.sol[P.t]){
     var dt=now-D.shownAt;D.times.push(dt);D.hits++;D.combo++;D.maxCombo=Math.max(D.maxCombo,D.combo);
     flash(pt.x,pt.y,pt.rect.width);sparks(pt.x,pt.y,12,["#fff4d6","#e0a948","#ff5a3c"],6);sfx.hit(D.combo);buzz(8);
-    $("dStat").textContent=(dt/1000).toFixed(2)+" 秒";drawHud();nextDraw();
+    var pts=drawPoints(dt,D.combo);D.score+=pts.total;D.speedSum+=pts.speed;D.chainSum+=pts.chain;
+    $("dStat").textContent="+"+pts.total+"　("+(dt/1000).toFixed(2)+" 秒)";drawHud();nextDraw();
   } else {
     D.misses++;D.combo=0;D.lockUntil=now+DRAW_LOCK;drawHud();
     retrigger(tEl,"miss");sfx.miss();buzz([30,40,30]);dKeys.classList.add("locked");$("dStat").textContent="MISS";
@@ -737,11 +740,12 @@ function drawFire(d){
   }
 }
 function finishDraw(){
-  D.running=false;var best=loadBest("draw"),isBest=D.hits>best;if(isBest)saveBest(D.hits);
+  D.running=false;var best=loadBest("draw"),isBest=D.score>best;if(isBest)saveBest(D.score);
   var avg=D.times.length?(D.times.reduce(function(a,b){return a+b},0)/D.times.length/1000).toFixed(2)+" 秒":"—";
   var fast=D.times.length?(Math.min.apply(null,D.times)/1000).toFixed(2)+" 秒":"—";
-  showResult({sub:"QUICK DRAW · "+DSIZE+"種類",title:"タイムアップ",bigLabel:"命中",big:D.hits+" 発",isBest:isBest,
-    stats:[["1発の平均",avg],["最速",fast],["最大連続",D.maxCombo],["命中率",(D.hits+D.misses?Math.round(100*D.hits/(D.hits+D.misses)):0)+"%"]]});
+  showResult({sub:"QUICK DRAW · "+DSIZE+"種類",title:"タイムアップ",bigLabel:"スコア",big:D.score.toLocaleString("en-US"),isBest:isBest,
+    stats:[["命中（×100）",D.hits+" 発"],["速射ボーナス","+"+D.speedSum.toLocaleString("en-US")],["連続ボーナス","+"+D.chainSum.toLocaleString("en-US")],
+           ["1発の平均",avg],["最速",fast],["最大連続",D.maxCombo],["命中率",(D.hits+D.misses?Math.round(100*D.hits/(D.hits+D.misses)):0)+"%"],["ミス",D.misses]]});
 }
 dKeys.addEventListener("pointerdown",function(e){var b=e.target.closest(".dk");if(!b)return;e.preventDefault();drawFire(+b.dataset.d)});
 $("dQuit").addEventListener("click",function(){if(D)D.running=false;showPick(null);show("title")});
